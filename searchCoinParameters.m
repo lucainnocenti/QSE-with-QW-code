@@ -7,8 +7,22 @@ ClearAll @@ Names["searchCoinParameters`Private`*"];
 
 searchCoinParameters;
 
+searchResultGetProjection;
+searchResultGetCoinParameters;
+searchResultComputeProjectedOutput;
+searchResultComputeFullOutput;
+searchResultProjectionProbability;
+
+searchResultTestFidelity;
 
 Begin["`Private`"];
+
+
+galpha = Global`\[Alpha];
+gtheta = Global`\[Theta];
+gxi = Global`\[Xi];
+Protect @ Evaluate[galpha, gtheta, gxi];
+
 
 conditionalPrint[message_String, flag_] := If[TrueQ @ flag, Print @ message];
 
@@ -16,12 +30,14 @@ globalizeSymbols[expr_] := expr /. (
     s_Symbol /; Context @ s === "searchCoinParameters`Private`"
   ) :> ToExpression @ SymbolName @ s;
 
+
 (* The Old convention can give problem during the optimization, because alpha
    can go out of the range [-1, 1] thus resulting in non-physical projections.*)
 projectionParametrization[alpha_, type_ : "New"] := Which[
   type == "Old", {alpha, Sqrt[1 - alpha ^ 2]},
   type == "New", {Cos @ alpha, Sin @ alpha}
 ]
+
 
 (* Compute the general symbolic expression for the projection matrix *)
 projectionMatrix[
@@ -56,9 +72,9 @@ compileExpression[
 ] /. {
   "compileInputs" :> RuleCondition @ {
     (* set of real inputs, one for each coin parameter *)
-    Sequence @@ Map[{#, _Real} &, parametersForMaximization]
+    Sequence @@ Map[{#, _Real} &, parametersForMaximization],
     (* 1d array of complex amplitudes, for the target state*)
-    (*{targetAmplitudes, _Complex, 1}*)
+    {targetAmplitudes, _Complex, 1}
   },
   "lengthProjection" :> RuleCondition @ Length @ projection
 };
@@ -227,7 +243,10 @@ searchCoinParameters[
     conditionalPrint["Starting maximization...", OptionValue @ "PrintExecutionMessages"];
     (* Go with the maximization *)
     Quiet @ Module[{numericalFunction},
-      numericalFunction[x__?NumericQ] := functionToMaximize[x];
+      If[Head @ functionToMaximize === CompiledFunction,
+        numericalFunction[x__?NumericQ] := functionToMaximize[x, targetState],
+        numericalFunction[x__?NumericQ] := functionToMaximize[x]
+      ];
       (*Print @ Definition @ numericalFunction; Abort[];*)
       resultOfMaximization = maximize[
         numericalFunction @@ parametersForMaximization,
@@ -240,6 +259,88 @@ searchCoinParameters[
      "CoinParameters" -> globalizeSymbols @ resultOfMaximization[[2]],
      "TargetState" -> targetState|>
   ]
+];
+
+
+(* Return True if the alpha projection parameter is explicitly present in the results*)
+searchResultExplicitProjectionQ[searchResult_Association] := MemberQ[
+  searchResult["CoinParameters"][[All, 1]], galpha
+];
+
+
+(* Return the projection stored in a result. If no explicit projection parameter
+   is present, then it is assumed that the projection is over the balanced
+   (1, 1) state. *)
+searchResultGetProjection[searchResult_Association, projectionConvention_ : "New"] := With[{
+    coinParameters = searchResult["CoinParameters"]
+  },
+  If[searchResultExplicitProjectionQ @ searchResult,
+    Which[
+      projectionConvention == "Old",
+      {galpha, Sqrt[1 - galpha^2]} /. coinParameters,
+      projectionConvention == "New",
+      {Cos @ galpha, Sin @ galpha} /. coinParameters
+    ],
+    Normalize @ {1, 1}
+  ]
+];
+
+
+(* Extract the values of the coin parameters from a result Association, and
+   format them into a list of pairs. *)
+searchResultGetCoinParameters[searchResult_Association] := With[{
+    coinParameters = searchResult["CoinParameters"]
+  },
+  If[searchResultExplicitProjectionQ @ searchResult,
+    (* If present, the parameter alpha is assumed to be the last in the list *)
+    coinParameters[[;;-2]], coinParameters
+  ][[All, 2]] // Partition[#, 2]&
+];
+
+
+Options @ searchResultComputeFullOutput = {
+  "InitialCoinState" -> {1, 0}
+};
+searchResultComputeFullOutput[searchResult_Association, OptionsPattern[]] := With[{
+    initialCoinState = OptionValue @ "InitialCoinState",
+    coins = searchResultGetCoinParameters @ searchResult
+  },
+  QWEvolve[initialCoinState, coins]
+];
+
+
+Options @ searchResultComputeProjectedOutput = {
+  "InitialCoinState" -> {1, 0},
+  "ProjectionConvention" -> "New"
+};
+searchResultComputeProjectedOutput[searchResult_Association, OptionsPattern[]] := With[{
+    initialCoinState = OptionValue @ "InitialCoinState",
+    projection = searchResultGetProjection[searchResult, OptionValue @ "ProjectionConvention"]
+  },
+  searchResultComputeFullOutput[searchResult, "InitialCoinState" -> initialCoinState] //
+    QWProjectCoin @ projection
+];
+
+
+(* Retest the fidelity using the full output computed by searchResultComputeFullOutput and
+   the value of the "TargetState" field. *)
+Options @ searchResultTestFidelity = {
+  "InitialCoinState" -> {1, 0},
+  "ProjectionConvention" -> "New"
+};
+searchResultTestFidelity[searchResult_Association, opts : OptionsPattern[]] := With[{
+    target = searchResult["TargetState"]
+  },
+  searchResultComputeProjectedOutput[searchResult, opts] // QFidelity @ target
+];
+
+
+Options @ searchResultProjectionProbability = Options @ searchResultComputeProjectedOutput;
+searchResultProjectionProbability[searchResult_Association, OptionsPattern[]] := With[{
+    fullOutput = searchResultComputeFullOutput[searchResult, "InitialCoinState" -> OptionValue @ "InitialCoinState"],
+    projection = searchResultGetProjection[searchResult, OptionValue @ "ProjectionConvention"]
+  },
+  fullOutput // QWProjectionProbability @ projection
 ];
 
 
