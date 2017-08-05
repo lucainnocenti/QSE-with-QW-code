@@ -2,6 +2,12 @@
 
 Code and data used for the paper: *Quantum state engineering using one-dimensional discrete-time quantum walks*.
 
+## Requirements
+Many functions used here rely on functionality provided by the Mathematica packages [`QM`](https://github.com/lucainnocenti/QM) and [`QuantumWalks`](https://github.com/lucainnocenti/QuantumWalks).
+Both of these packages can be installed by simply `git clone`ing the repositories into the directoy given by Mathematica evaluating `FileNameJoin@{$UserBaseDirectory, "Applications"}`.
+Furthermore, the [`MaTeX`](https://github.com/szhorvat/MaTeX) package is required for a few functionalities (but this should be automatically installed by `QM`).
+
+
 ## Package files:
 - `reachabilitySolutions.m`: Defines a set of function to easily handle the analytical reachability conditions to obtain target superpositions after projection over the + state. Mainly used in `reachabilityConditions.nb`.
 - `searchCoinParameters.m`: Defines the function `searchCoinParameters`, which is used to run the numerical optimization procedure to find sets of coin parameters generating a target superposition. A number of utilities to handle and process the output of `searchCoinParameters` are also defined here.
