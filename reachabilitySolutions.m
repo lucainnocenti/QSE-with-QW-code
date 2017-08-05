@@ -5,6 +5,7 @@ ClearAll @@ Names["reachabilitySolutions`*"];
 ClearAll @@ Names["reachabilitySolutions`Private`*"];
 
 (* Verify that a given state satisfies the reachability conditions *)
+generalTwoColumnsStateWithD;
 verifyReachabilityConditions;
 makeConditionsForDs;
 findDsGivingReachableState;
