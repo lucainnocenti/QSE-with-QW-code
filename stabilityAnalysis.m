@@ -72,7 +72,8 @@ Options[plotFidelityVsParameters] = {
 };
 Options[plotFidelityVsParameters] = Normal @ Association @ Join[
   Options @ Plot,
-  Options @ plotFidelityVsParameters
+  Options @ plotFidelityVsParameters,
+  Options @ makeLabelForLine
 ];
 plotFidelityVsParameters[coinParameters_List,
   targetState_List, {epsMin_, epsMax_}, opts : OptionsPattern[]
@@ -81,7 +82,9 @@ plotFidelityVsParameters[coinParameters_List,
       fidelityWithEps[
         coinParameters, changingPar, targetState,
         OptionValue @ "TypeOfPerturbation", OptionValue @ "Projection"
-      ] // makeLabelForLine[coinParameters, changingPar],
+      ] // makeLabelForLine[coinParameters, changingPar,
+            "HighlightZeros" -> OptionValue @ "HighlightZeros"
+          ],
 
       {
         changingPar,
