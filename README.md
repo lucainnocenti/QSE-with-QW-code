@@ -1,6 +1,6 @@
 # Quantum state engineering with QW - code
 
-Code and data used for the paper: *Quantum state engineering using one-dimensional discrete-time quantum walks*.
+Code and data used for the paper: [*Quantum state engineering using one-dimensional discrete-time quantum walks*](https://arxiv.org/abs/1710.10518).
 
 ## Requirements
 Many functions used here rely on functionality provided by the Mathematica packages [`QM`](https://github.com/lucainnocenti/QM) and [`QuantumWalks`](https://github.com/lucainnocenti/QuantumWalks).
