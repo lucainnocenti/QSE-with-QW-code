@@ -118,7 +118,7 @@ noncompiledExpression[
   finalWalkerStateAfterProjection = Normalize[
     Dot[projection, finalWalkerState][[ ;; ;; 2]]
   ];
-  overlapWithTarget = Dot[finalWalkerStateAfterProjection, targetState];
+  overlapWithTarget = Dot[Conjugate @ finalWalkerStateAfterProjection, targetState];
   ReleaseHold[
     Hold[
       functionToMaximize["coinParameters"] = Abs[overlapWithTarget] ^ 2
@@ -247,7 +247,7 @@ searchCoinParameters[
         numericalFunction[x__?NumericQ] := functionToMaximize[x, targetState],
         numericalFunction[x__?NumericQ] := functionToMaximize[x]
       ];
-      (*Print @ Definition @ numericalFunction; Abort[];*)
+      (* Print @ Definition @ numericalFunction; Abort[]; *)
       resultOfMaximization = maximize[
         numericalFunction @@ parametersForMaximization,
         parametersForMaximization,
